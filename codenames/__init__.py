@@ -1,4 +1,5 @@
 from conceptnet5.vectors.formats import *
+from conceptnet5.vectors.transforms import *
 from conceptnet5.vectors.query import *
 from conceptnet5.vectors import standardized_uri
 from scipy.special import erf
@@ -11,7 +12,7 @@ def tag_en(word):
 
 
 def untag_en(term):
-    return term[6:]
+    return term[6:].replace('_', ' ')
 
 
 def _load_vectors():
@@ -23,7 +24,8 @@ def _load_vectors():
     ]
     # Add the two-word phrases that appear in Codenames
     selections += ['/c/en/ice_cream', '/c/en/new_york', '/c/en/scuba_diver']
-    return VectorSpaceWrapper(frame=frame.loc[selections])
+    frame = l2_normalize_rows(frame.loc[selections].astype('f'))
+    return VectorSpaceWrapper(frame=frame)
 
 
 VECTORS = _load_vectors()
@@ -36,6 +38,45 @@ def get_similarity(term1, term2):
     else:
         CACHE[term1, term2] = VECTORS.get_similarity(tag_en(term1), tag_en(term2))
         return CACHE[term1, term2]
+
+
+
+def clue_is_ok(words_on_board, clue):
+    clue = untag_en(clue)
+    for word in words_on_board:
+        word = untag_en(word)
+        if word[:-1] in clue or clue in word:
+            return False
+    return True
+
+
+def simframe_best_clue(simframe, values, safety=0.1, log_stream=None):
+    """
+    `simframe` is a V x 25 matrix, where V is the vocabulary size, containing
+    the similarity of all cluable words to the board.
+
+    `values` is a vector of 25 payoffs for the words on the board.
+    """
+    pos_mask = simframe * (values > 0)
+    neu_max = np.max(simframe * (values <= 0), axis=1)
+    neg_max = np.max(simframe * (values <= -1), axis=1)
+    ded_max = np.max(simframe * (values <= -2), axis=1)
+    neu_margins = np.maximum(0, (pos_mask.T - neu_max - safety).T)
+    neg_margins = np.maximum(0, (pos_mask.T - neg_max - safety).T)
+    ded_margins = np.maximum(0, (pos_mask.T - ded_max - safety).T)
+    combined_margins = (neu_margins * neg_margins * ded_margins) ** (1/8) * (neu_margins > 0)
+    values = combined_margins.sum(axis=1)
+
+    possible_clues = values.nlargest(20)
+    print(possible_clues, file=log_stream)
+    for clue in possible_clues.index:
+        if clue_is_ok(simframe.columns, clue):
+            row = combined_margins.loc[clue]
+            count = (row > 0).sum()
+            explanation = row[row > 0]
+            print(explanation, file=log_stream)
+            return untag_en(clue), count
+    raise RuntimeError('all clues are bad')
 
 
 def best_clue(word_values, log_stream=None):

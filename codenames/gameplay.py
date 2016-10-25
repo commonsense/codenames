@@ -1,5 +1,7 @@
 import random
-from codenames import best_clue
+import pandas as pd
+import numpy as np
+from codenames import best_clue, tag_en, simframe_best_clue, VECTORS
 from blessings import Terminal
 from pkg_resources import resource_filename
 from collections import Counter
@@ -17,6 +19,22 @@ PLAYER_NAMES = {
     RED: 'Red',
     BLUE: 'Blue'
 }
+
+
+POSITION_VALUES = np.ones(shape=(10, 10), dtype='f')
+POSITION_VALUES[0, :] = 1.
+POSITION_VALUES[1, :] = .99
+POSITION_VALUES[:, 0] = 0.
+for isum in range(3, 19):
+    for ours in range(1, min(10, isum)):
+        theirs = isum - ours
+        if theirs >= 10:
+            continue
+        POSITION_VALUES[ours, theirs] = 1 - min(
+            POSITION_VALUES[theirs, ours - 1] * .99 + POSITION_VALUES[theirs, ours] * .01,
+            POSITION_VALUES[theirs, max(ours - 2, 0)] * .5 + POSITION_VALUES[theirs, ours - 1] * .3 + POSITION_VALUES[theirs, ours] * .2,
+            POSITION_VALUES[theirs, max(ours - 3, 0)] * .1 + POSITION_VALUES[theirs, max(ours - 2, 0)] * .4 + POSITION_VALUES[theirs, ours - 1] * .4 + POSITION_VALUES[theirs, ours] * .1
+        )
 
 
 def make_board():
@@ -55,20 +73,19 @@ def show_board(board, status=''):
     print(status)
 
 
-def get_ai_clue(board, known_board, current_player, log):
-    values = {}
+def get_ai_clue(simframe, board, known_board, current_player, log):
+    values = pd.Series(index=simframe.columns)
     for i, (word, category) in enumerate(board):
-        word = word.lower()
         if known_board[i][1] == UNKNOWN:
             if category == current_player:
-                values[word] = 1.
+                values.loc[tag_en(word)] = 1.
             elif category == OPPOSITE_PLAYER[current_player]:
-                values[word] = -1.
+                values.loc[tag_en(word)] = -1.
             elif category == NEUTRAL:
-                values[word] = -0.2
+                values.loc[tag_en(word)] = 0.
             elif category == ASSASSIN:
-                values[word] = -2.
-    return best_clue(values, log)
+                values.loc[tag_en(word)] = -2.
+    return simframe_best_clue(simframe, values, log_stream=log)
 
 
 def get_human_guess(board, current_player):
@@ -91,6 +108,9 @@ def main():
     current_player = RED
     status = ''
 
+    board_vocab = [tag_en(word) for (word, category) in board]
+    simframe = VECTORS.frame.dot(VECTORS.frame.loc[board_vocab].T)
+
     with open('/tmp/codenames.log', 'w') as log:
         print(board, file=log)
         while True:
@@ -107,7 +127,7 @@ def main():
             print(diff)
             show_board(known_board, status)
             print("%s spymaster is thinking of a clue..." % PLAYER_NAMES[current_player])
-            clue_word, clue_number, _, _ = get_ai_clue(board, known_board, current_player, log)
+            clue_word, clue_number = get_ai_clue(simframe, board, known_board, current_player, log)
             print("Clue: %s %d" % (clue_word, clue_number))
 
             picked_category = current_player
