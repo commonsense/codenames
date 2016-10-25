@@ -19,7 +19,7 @@ def _load_vectors():
     frame = load_hdf('/home/rspeer/code/conceptnet5/data/vectors/mini.h5')
     selections = [
         label for label in frame.index
-        if label.startswith('/c/en/') and '_' not in label
+        if label.startswith('/c/en/') and '_' not in label and '#' not in label
         and wordfreq.zipf_frequency(label[6:], 'en') > 3.0
     ]
     # Add the two-word phrases that appear in Codenames
@@ -50,33 +50,47 @@ def clue_is_ok(words_on_board, clue):
     return True
 
 
-def simframe_best_clue(simframe, values, safety=0.1, log_stream=None):
+def margin_prob(margin):
+    return erf(margin / .18) / 2 + 0.5
+
+
+def simframe_best_clue(simframe, values, log_stream=None):
     """
     `simframe` is a V x 25 matrix, where V is the vocabulary size, containing
     the similarity of all cluable words to the board.
 
     `values` is a vector of 25 payoffs for the words on the board.
     """
-    pos_mask = simframe * (values > 0)
-    neu_max = np.max(simframe * (values <= 0), axis=1)
-    neg_max = np.max(simframe * (values <= -1), axis=1)
-    ded_max = np.max(simframe * (values <= -2), axis=1)
-    neu_margins = np.maximum(0, (pos_mask.T - neu_max - safety).T)
-    neg_margins = np.maximum(0, (pos_mask.T - neg_max - safety).T)
-    ded_margins = np.maximum(0, (pos_mask.T - ded_max - safety).T)
-    combined_margins = (neu_margins * neg_margins * ded_margins) ** (1/8) * (neu_margins > 0)
-    values = combined_margins.sum(axis=1)
+    neu_max = np.max(simframe.ix[:, values < 0], axis=1)
+    #neg_max = np.max(simframe * (values <= -2), axis=1)
+    #ded_max = np.max(simframe * (values <= -3), axis=1)
+    neu_probs = margin_prob((simframe.T - neu_max).T).ix[:, values > 0]
+    #neg_probs = margin_prob((simframe.T - neg_max).T) * pos_mask
+    #ded_probs = margin_prob((simframe.T - ded_max).T) * pos_mask
 
-    possible_clues = values.nlargest(20)
-    print(possible_clues, file=log_stream)
-    for clue in possible_clues.index:
-        if clue_is_ok(simframe.columns, clue):
-            row = combined_margins.loc[clue]
-            count = (row > 0).sum()
-            explanation = row[row > 0]
-            print(explanation, file=log_stream)
-            return untag_en(clue), count
-    raise RuntimeError('all clues are bad')
+    #combined_probs = ((neu_probs * neg_probs * ded_probs) ** (1 / 3)).fillna(0)
+    combined_probs = neu_probs.fillna(0)
+
+    prob_values = np.sort(combined_probs.values)[:, ::-1][:, :9]
+    prob_frame = pd.DataFrame(prob_values, index=simframe.index)
+    products = pd.DataFrame(np.cumprod(prob_values, axis=1), index=simframe.index)
+
+    clue_choices = []
+    for nclued in range(1, min(10, products.shape[1])):
+        possible_clues = products[nclued - 1].nlargest(20)
+        for clue in possible_clues.index:
+            if clue_is_ok(simframe.columns, clue):
+                probs = products.loc[clue, 0:(nclued-1)]
+                min_prob = prob_frame.loc[clue, nclued - 1]
+                row = combined_probs.loc[clue]
+                explanation = row[row >= min_prob].sort_values()
+                clue_choices.append((nclued, untag_en(clue), probs))
+                print('explanation', file=log_stream)
+                print(explanation, file=log_stream)
+                print('clue chosen', file=log_stream)
+                print(nclued, clue, min_prob, file=log_stream)
+                break
+    return clue_choices
 
 
 def best_clue(word_values, log_stream=None):
