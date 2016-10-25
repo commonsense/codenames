@@ -67,7 +67,7 @@ def get_ai_clue(board, known_board, current_player, log):
             elif category == NEUTRAL:
                 values[word] = -0.2
             elif category == ASSASSIN:
-                values[word] = -5.
+                values[word] = -2.
     return best_clue(values, log)
 
 

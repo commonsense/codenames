@@ -19,7 +19,7 @@ def _load_vectors():
     selections = [
         label for label in frame.index
         if label.startswith('/c/en/') and '_' not in label
-        and wordfreq.zipf_frequency(label[6:], 'en', 'large') > 2.0
+        and wordfreq.zipf_frequency(label[6:], 'en') > 3.0
     ]
     # Add the two-word phrases that appear in Codenames
     selections += ['/c/en/ice_cream', '/c/en/new_york', '/c/en/scuba_diver']
@@ -53,7 +53,7 @@ def best_clue(word_values, log_stream=None):
     for nterms in (3, 2, 1):
         for combo in combinations(pos_terms, nterms):
             weighted_terms = [(term, 1) for term in combo]
-            similar = VECTORS.similar_terms(weighted_terms, limit=100).index
+            similar = VECTORS.similar_terms(weighted_terms, limit=500).index
 
             nfound = 0
             for term in similar:
@@ -92,9 +92,9 @@ def best_clue_number(term, word_values):
         if cutoff_value < 0.:
             break
         # The game value of successfully cluing this number of words. For now
-        # we assume that each additional clued word doubles your win
+        # we assume that each additional clued word triples your win
         # probability, which is a very rough assumption.
-        score_value = 1 << rank
+        score_value = 3 ** rank
         payoff = clue_payoff(ranked_values[rank], ranked_values[rank + 1:]) * score_value
         if payoff <= 0.:
             break
