@@ -51,9 +51,8 @@ def clue_is_ok(words_on_board, clue):
 
 
 def margin_prob(margin):
-    stdevs = erf(margin / .18)
-    prob = stdevs / 2 + 0.5
-    return prob ** 2
+    balance = erf(margin / .18)
+    return balance / 2 + 0.5
 
 
 def simframe_best_clue(simframe, values, log_stream=None):
@@ -64,14 +63,13 @@ def simframe_best_clue(simframe, values, log_stream=None):
     `values` is a vector of 25 payoffs for the words on the board.
     """
     neu_max = np.max(simframe.ix[:, values < 0], axis=1)
-    #neg_max = np.max(simframe * (values <= -2), axis=1)
-    #ded_max = np.max(simframe * (values <= -3), axis=1)
+    neg_max = np.max(simframe.ix[:, values <= -2], axis=1)
+    ded_max = np.max(simframe.ix[:, values <= -3], axis=1)
     neu_probs = margin_prob((simframe.T - neu_max).T).ix[:, values > 0]
-    #neg_probs = margin_prob((simframe.T - neg_max).T) * pos_mask
-    #ded_probs = margin_prob((simframe.T - ded_max).T) * pos_mask
+    neg_probs = margin_prob((simframe.T - neg_max).T).ix[:, values > 0]
+    ded_probs = margin_prob((simframe.T - ded_max).T).ix[:, values > 0]
 
-    #combined_probs = ((neu_probs * neg_probs * ded_probs) ** (1 / 3)).fillna(0)
-    combined_probs = neu_probs.fillna(0)
+    combined_probs = (neu_probs * neg_probs * ded_probs).fillna(0)
 
     prob_values = np.sort(combined_probs.values)[:, ::-1][:, :9]
     prob_frame = pd.DataFrame(prob_values, index=simframe.index)
