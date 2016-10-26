@@ -55,7 +55,6 @@ def justify(word):
 
 def show_board(board, status=''):
     term = Terminal()
-    print(term.clear())
     for i, (word, category) in enumerate(board):
         jword = word[:11]
         if category == UNKNOWN:
@@ -139,7 +138,7 @@ def main():
                 show_board(board, "Blue team wins.")
                 return BLUE
 
-            show_board(known_board, status)
+            show_board(known_board, '')
             print("%s spymaster is thinking of a clue..." % PLAYER_NAMES[current_player])
             clue_number, clue_word = get_ai_clue(simframe, board, known_board, diff, current_player, log)
             print("Clue: %s %d" % (clue_word, clue_number))
@@ -149,6 +148,7 @@ def main():
                 choice = get_human_guess(board, current_player)
                 if choice == 'PASS':
                     status = '%s passes.' % PLAYER_NAMES[current_player]
+                    print(status)
                     break
 
                 idx = board_indices[choice]
