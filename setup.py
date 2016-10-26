@@ -18,6 +18,6 @@ setup(
         'codenames': ['data/*'],
     },
     entry_points={
-        'console_scripts': ['codenames = codenames.gameplay:main'],
+        'console_scripts': ['codenames = codenames.console:main'],
     },
 )
