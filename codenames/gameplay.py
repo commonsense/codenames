@@ -1,126 +1,102 @@
-import random
-from codenames import (
-    tag_en, OPPOSITE_PLAYER, PLAYER_NAMES, UNKNOWN, RED, BLUE,
-    NEUTRAL, ASSASSIN
-)
-from codenames.ai import get_ai_clue, VECTORS
+from codenames import (Team, CodenamesBoard, FileLog)
+from codenames.ai import AISpymaster
 from blessings import Terminal
-from pkg_resources import resource_filename
-from collections import Counter
-
-
-WORDLIST = [line.strip() for line in open(resource_filename('codenames', 'data/codenames-words.txt'))]
-
-
-def make_board():
-    words = random.sample(WORDLIST, 25)
-    categories = (
-        [(word, RED) for word in words[:9]] +
-        [(word, BLUE) for word in words[9:17]] +
-        [(word, NEUTRAL) for word in words[17:24]] +
-        [(word, ASSASSIN) for word in words[24:25]]
-    )
-    random.shuffle(categories)
-    return categories
 
 
 def justify(word):
     return ' ' + word.ljust(15)
 
 
-def show_board(board, status=''):
+def show_board_items(items, status=''):
     term = Terminal()
-    for i, (word, category) in enumerate(board):
+    for i, (word, team) in enumerate(items):
         jword = word[:11]
-        if category == UNKNOWN:
+        if team is Team.unknown:
             print(justify(jword), end='')
-        elif category == RED:
+        elif team is Team.red:
             print(term.bright_red(justify(jword + ' [r]')), end='')
-        elif category == BLUE:
+        elif team is Team.blue:
             print(term.bright_blue(justify(jword + ' [b]')), end='')
-        elif category == NEUTRAL:
+        elif team is Team.neutral:
             print(term.yellow(justify(jword + ' [n]')), end='')
-        elif category == ASSASSIN:
+        elif team is Team.assassin:
             print(term.reverse(justify(jword + ' [a]')), end='')
         if i % 5 == 4:
             print('\n')
     print(status)
 
 
-def get_human_guess(board, current_player):
+def get_human_guess(board: CodenamesBoard, current_team: Team):
+    valid = board.valid_guesses()
     while True:
-        prompt = "%s team's guess: " % PLAYER_NAMES[current_player]
+        prompt = "%s team's guess: " % current_team.name.title()
         guess = input(prompt).strip().upper()
         if guess == 'PASS':
             return guess
-        elif any(word == guess for (word, category) in board):
+        elif guess in valid:
             return guess
         else:
-            print('%s is not an available word.' % guess)
+            print('%r is not an available word.' % guess)
 
 
 def main():
     term = Terminal()
-    board = make_board()
-    board_indices = {word: i for (i, (word, category)) in enumerate(board)}
-    known_board = [(word, UNKNOWN) for (word, category) in board]
-    current_player = RED
+    board = CodenamesBoard.generate()
+    current_team = Team.red
     status = ''
+    log = FileLog('/tmp/codenames.log')
+    spymasters = {
+        Team.red: AISpymaster(Team.red, log),
+        Team.blue: AISpymaster(Team.blue, log)
+    }
 
-    board_vocab = [tag_en(word) for (word, category) in board]
-    simframe = VECTORS.frame.dot(VECTORS.frame.loc[board_vocab].T)
+    while True:
+        winner = board.winner()
+        if winner is Team.red:
+            show_board_items(board.spy_items(), "Red team wins.")
+            return Team.red
+        if winner is Team.blue:
+            show_board_items(board.spy_items(), "Blue team wins.")
+            return Team.blue
 
-    with open('/tmp/codenames.log', 'w') as log:
-        print(board, file=log)
-        while True:
-            real_counts = Counter(category for (word, category) in board)
-            known_counts = Counter(category for (word, category) in known_board)
-            diff = real_counts - known_counts
-            if diff[RED] == 0:
-                show_board(board, "Red team wins.")
-                return RED
-            if diff[BLUE] == 0:
-                show_board(board, "Blue team wins.")
-                return BLUE
+        show_board_items(board.known_items(), '')
+        spymaster = spymasters[current_team]
+        print("%s is thinking of a clue..." % spymaster.name())
+        clue_number, clue_word = spymaster.get_clue(board)
+        print("Clue: %s %d" % (clue_word, clue_number))
 
-            show_board(known_board, '')
-            print("%s spymaster is thinking of a clue..." % PLAYER_NAMES[current_player])
-            clue_number, clue_word = get_ai_clue(simframe, board, known_board, diff, current_player, log)
-            print("Clue: %s %d" % (clue_word, clue_number))
-
-            picked_category = current_player
-            while picked_category == current_player:
-                choice = get_human_guess(board, current_player)
-                if choice == 'PASS':
-                    status = '%s passes.' % PLAYER_NAMES[current_player]
-                    print(status)
-                    break
-
-                idx = board_indices[choice]
-                word, picked_category = board[idx]
-                known_board[idx] = board[idx]
-
-                if picked_category == RED:
-                    shown_category = term.bright_red('red')
-                elif picked_category == BLUE:
-                    shown_category = term.bright_blue('blue')
-                elif picked_category == NEUTRAL:
-                    shown_category = term.yellow('neutral')
-                elif picked_category == ASSASSIN:
-                    shown_category == term.reverse('the assassin')
-                else:
-                    raise ValueError(picked_category)
-                status = '%s is %s.' % (choice, shown_category)
+        picked_team = current_team
+        while picked_team == current_team:
+            choice = get_human_guess(board, current_team)
+            if choice == 'PASS':
+                status = '%s passes.' % current_team.name.title()
                 print(status)
+                break
 
-                if picked_category == ASSASSIN:
-                    if current_player == RED:
-                        show_board(board, "Blue team wins.")
-                        return BLUE
-                    else:
-                        show_board(board, "Red team wins.")
-                        return RED
-            current_player = OPPOSITE_PLAYER[current_player]
+            picked_team = board.get_word_team(choice)
+            board.reveal_word(choice)
+
+            if picked_team is Team.red:
+                shown_category = term.bright_red('red')
+            elif picked_team is Team.blue:
+                shown_category = term.bright_blue('blue')
+            elif picked_team is Team.neutral:
+                shown_category = term.yellow('neutral')
+            elif picked_team is Team.assassin:
+                shown_category == term.reverse('the assassin')
+            else:
+                raise ValueError(picked_team)
+            status = '%s is %s.' % (choice, shown_category)
+            print(status)
+
+            if picked_team is Team.assassin:
+                if current_team is Team.red:
+                    show_board_items(board.spy_items(), "Blue team wins.")
+                    return Team.blue
+                else:
+                    show_board_items(board.spy_items(), "Red team wins.")
+                    return Team.red
+        current_team = current_team.opponent()
 
 
 if __name__ == '__main__':
