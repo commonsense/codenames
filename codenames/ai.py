@@ -47,15 +47,6 @@ def _load_vectors():
 
 
 VECTORS = _load_vectors()
-CACHE = {}
-
-
-def get_similarity(term1, term2):
-    if (term1, term2) in CACHE:
-        return CACHE[term1, term2]
-    else:
-        CACHE[term1, term2] = VECTORS.get_similarity(tag_en(term1), tag_en(term2))
-        return CACHE[term1, term2]
 
 
 def simframe_best_clue(simframe, values, log_stream=None):
