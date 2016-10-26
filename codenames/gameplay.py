@@ -1,40 +1,15 @@
 import random
-import pandas as pd
-import numpy as np
-from codenames import best_clue, tag_en, simframe_best_clue, VECTORS
+from codenames import (
+    tag_en, OPPOSITE_PLAYER, PLAYER_NAMES, UNKNOWN, RED, BLUE,
+    NEUTRAL, ASSASSIN
+)
+from codenames.ai import get_ai_clue, VECTORS
 from blessings import Terminal
 from pkg_resources import resource_filename
 from collections import Counter
 
 
 WORDLIST = [line.strip() for line in open(resource_filename('codenames', 'data/codenames-words.txt'))]
-
-# Enumerate possible categories for cards
-UNKNOWN, RED, BLUE, NEUTRAL, ASSASSIN = range(5)
-OPPOSITE_PLAYER = {
-    RED: BLUE,
-    BLUE: RED
-}
-PLAYER_NAMES = {
-    RED: 'Red',
-    BLUE: 'Blue'
-}
-
-
-POSITION_VALUES = np.ones(shape=(10, 10), dtype='f')
-POSITION_VALUES[0, :] = 1.
-POSITION_VALUES[1, :] = .99
-POSITION_VALUES[:, 0] = 0.
-for isum in range(3, 19):
-    for ours in range(1, min(10, isum)):
-        theirs = isum - ours
-        if theirs >= 10:
-            continue
-        POSITION_VALUES[ours, theirs] = 1 - min(
-            POSITION_VALUES[theirs, ours - 1] * .99 + POSITION_VALUES[theirs, ours] * .01,
-            POSITION_VALUES[theirs, max(ours - 2, 0)] * .5 + POSITION_VALUES[theirs, ours - 1] * .3 + POSITION_VALUES[theirs, ours] * .2,
-            POSITION_VALUES[theirs, max(ours - 3, 0)] * .1 + POSITION_VALUES[theirs, max(ours - 2, 0)] * .4 + POSITION_VALUES[theirs, ours - 1] * .4 + POSITION_VALUES[theirs, ours] * .1
-        )
 
 
 def make_board():
@@ -70,36 +45,6 @@ def show_board(board, status=''):
         if i % 5 == 4:
             print('\n')
     print(status)
-
-
-def get_ai_clue(simframe, board, known_board, scores, current_player, log):
-    my_score = scores[current_player]
-    their_score = scores[OPPOSITE_PLAYER[current_player]]
-    values = pd.Series(index=simframe.columns).fillna(0.)
-    for i, (word, category) in enumerate(board):
-        if known_board[i][1] == UNKNOWN:
-            if category == current_player:
-                values.loc[tag_en(word)] = 1.
-            elif category == OPPOSITE_PLAYER[current_player]:
-                values.loc[tag_en(word)] = -2.
-            elif category == NEUTRAL:
-                values.loc[tag_en(word)] = -1.
-            elif category == ASSASSIN:
-                values.loc[tag_en(word)] = -3.
-
-    best = (0, 'dunno', 0.)
-    for nclued, clue, probs in simframe_best_clue(simframe, values, log_stream=log):
-        prob_left = 1.
-        ev = 0.
-        for idx, prob in enumerate(probs):
-            prob_fail = 1. - prob
-            opp_ev = POSITION_VALUES[their_score - 1, my_score - idx] * 0.5 + POSITION_VALUES[their_score, my_score - idx] * 0.4 + 0.1
-            ev += prob_left * prob_fail * (1. - opp_ev)
-            prob_left *= prob
-        ev += prob_left * (1. - POSITION_VALUES[their_score, my_score - nclued])
-        if ev > best[2]:
-            best = (nclued, clue, ev)
-    return best[:2]
 
 
 def get_human_guess(board, current_player):
@@ -180,4 +125,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
