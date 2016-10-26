@@ -51,7 +51,9 @@ def clue_is_ok(words_on_board, clue):
 
 
 def margin_prob(margin):
-    return erf(margin / .18) / 2 + 0.5
+    stdevs = erf(margin / .18)
+    prob = stdevs / 2 + 0.5
+    return prob ** 2
 
 
 def simframe_best_clue(simframe, values, log_stream=None):
@@ -76,11 +78,11 @@ def simframe_best_clue(simframe, values, log_stream=None):
     products = pd.DataFrame(np.cumprod(prob_values, axis=1), index=simframe.index)
 
     clue_choices = []
-    for nclued in range(1, min(10, products.shape[1])):
+    for nclued in range(1, min(10, products.shape[1] + 1)):
         possible_clues = products[nclued - 1].nlargest(20)
         for clue in possible_clues.index:
             if clue_is_ok(simframe.columns, clue):
-                probs = products.loc[clue, 0:(nclued-1)]
+                probs = prob_frame.loc[clue, 0:(nclued-1)]
                 min_prob = prob_frame.loc[clue, nclued - 1]
                 row = combined_probs.loc[clue]
                 explanation = row[row >= min_prob].sort_values()
@@ -173,7 +175,7 @@ def clue_payoff(intended_clue, distractors):
     best, payoff_best, _ = intended_clue
     for other, payoff_other, _ in distractors:
         # Calculate the probability of guessing an unintended word
-        prob_other = erf((other - best) / .18) / 2 + 0.5
+        prob_other = erf((other - best) / .2) / 2 + 0.5
         prob_best *= (1.0 - prob_other)
         weight_rest += prob_other
         payoff_rest += prob_other * payoff_other
