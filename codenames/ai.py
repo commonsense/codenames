@@ -72,8 +72,8 @@ class AISpymaster:
             index=board_vocab
         )
 
-        best = (0, 'dunno', 0.)
-        for nclued, clue, probs in self.solve_clue(board, simframe, values):
+        best = (0, 'dunno', 0., None)
+        for nclued, clue, probs, explanation in self.solve_clue(board, simframe, values):
             prob_left = 1.
             ev = 0.
             for idx, prob in enumerate(probs):
@@ -83,8 +83,16 @@ class AISpymaster:
                 prob_left *= prob
             ev += prob_left * (1. - POSITION_VALUES[their_score, my_score - nclued])
             if ev > best[2]:
-                best = (nclued, clue, ev)
-        return best[:2]
+                best = (nclued, clue, ev, explanation)
+        nclued, clue, ev, explanation = best
+        if explanation is not None:
+            describe_pieces = [
+                "%s (%d%%)" % (untag_en(cn_term), prob * 100)
+                for (cn_term, prob) in explanation[::-1].items()
+            ]
+            description = ", ".join(describe_pieces)
+            self.log.write("%s %d -> %s" % (clue, nclued, description))
+        return (nclued, clue)
 
     def solve_clue(self, board: CodenamesBoard, simframe: pd.DataFrame, values: pd.Series):
         """
@@ -117,12 +125,7 @@ class AISpymaster:
                     min_prob = prob_frame.loc[clue, nclued - 1]
                     row = combined_probs.loc[clue]
                     explanation = row[row >= min_prob].sort_values()
-                    clue_choices.append((nclued, word, probs))
-                    self.log.write(
-                        'clue chosen: %s %d (prob: %4.4f)'
-                        % (word, nclued, min_prob)
-                    )
-                    self.log.write('explanation: %s' % explanation)
+                    clue_choices.append((nclued, word, probs, explanation))
                     break
         return clue_choices
 
