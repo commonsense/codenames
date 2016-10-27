@@ -2,10 +2,9 @@ from conceptnet5.vectors.formats import load_hdf
 from conceptnet5.vectors.transforms import l2_normalize_rows
 from conceptnet5.vectors.query import VectorSpaceWrapper
 from codenames import (
-    tag_en, untag_en, CodenamesBoard, Team, Log, NullLog
+    tag_en, untag_en, CodenamesBoard, Team, Channel, Spymaster
 )
 from scipy.special import erf
-from typing import Optional
 import numpy as np
 import pandas as pd
 import wordfreq
@@ -49,15 +48,9 @@ def _load_vectors():
 VECTORS = _load_vectors()
 
 
-class AISpymaster:
-    def __init__(self, team: Team, log: Optional[Log]=None):
-        if log is None:
-            log = NullLog()
-        self.team = team
-        self.log = log
-
+class AISpymaster(Spymaster):
     def name(self):
-        return "%s spymaster" % (self.team.name.title())
+        return "%s AI spymaster" % self.team.name.title()
 
     def get_clue(self, board: CodenamesBoard) -> (int, str):
         scores = board.scores()
@@ -91,7 +84,7 @@ class AISpymaster:
                 for (cn_term, prob) in explanation[::-1].items()
             ]
             description = ", ".join(describe_pieces)
-            self.log.write("%s %d -> %s" % (clue, nclued, description))
+            self.channel.notify('notify', self.name(), "%s %d -> %s" % (clue, nclued, description))
         return (nclued, clue)
 
     def solve_clue(self, board: CodenamesBoard, simframe: pd.DataFrame, values: pd.Series):
@@ -109,7 +102,7 @@ class AISpymaster:
         neg_probs = margin_prob((simframe.T - neg_max).T).ix[:, values > 0]
         ded_probs = margin_prob((simframe.T - ded_max).T).ix[:, values > 0]
 
-        combined_probs = (neu_probs * neg_probs * ded_probs).fillna(0)
+        combined_probs = (neu_probs * neu_probs * (neg_probs * ded_probs) ** 0.5).fillna(0)
 
         prob_values = np.sort(combined_probs.values)[:, ::-1][:, :9]
         prob_frame = pd.DataFrame(prob_values, index=simframe.index)

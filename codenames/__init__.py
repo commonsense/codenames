@@ -3,6 +3,7 @@ from enum import Enum
 from pkg_resources import resource_filename
 from typing import List, Tuple, Dict, Sequence, Set
 import random
+import json
 
 
 WORDLIST = [
@@ -49,8 +50,8 @@ class CodenamesBoard:
         self.spy_values = spy_values
         self.known_values = known_values
 
-    @classmethod
-    def generate(cls):
+    @staticmethod
+    def generate():
         words = random.sample(WORDLIST, 25)
         teams = [Team.red] * 9 + [Team.blue] * 8 + [Team.neutral] * 7 + [Team.assassin]
         random.shuffle(teams)
@@ -87,11 +88,11 @@ class CodenamesBoard:
         else:
             return Team.unknown
 
-    def known_items(self) -> Sequence[Tuple[str, Team]]:
-        return zip(self.words, self.known_values)
+    def known_items(self) -> List[Tuple[str, Team]]:
+        return list(zip(self.words, self.known_values))
 
-    def spy_items(self) -> Sequence[Tuple[str, Team]]:
-        return zip(self.words, self.spy_values)
+    def spy_items(self) -> List[Tuple[str, Team]]:
+        return list(zip(self.words, self.spy_values))
 
     def unrevealed_items(self) -> List[Tuple[str, Team]]:
         items = []
@@ -103,24 +104,42 @@ class CodenamesBoard:
     def valid_guesses(self) -> Set[str]:
         return {word for (word, team) in self.unrevealed_items()}
 
+    def to_json(self):
+        items = [
+            (self.words[i], self.spy_values[i].name, self.known_values[i].name)
+            for i in range(len(self.words))
+        ]
+        return json.dumps(items)
 
-class Log:
-    def write(self, text):
+    @staticmethod
+    def from_json(jsondata):
+        items = json.loads(jsondata)
+        words, spy_texts, known_texts = zip(*items)
+        spy_values = [Team[name] for name in spy_texts]
+        known_values = [Team[name] for name in known_texts]
+        return CodenamesBoard(words, spy_values, known_values)
+
+
+class Channel:
+    def notify(self, tag, value):
+        raise NotImplementedError
+
+    def await_input(self, prompt):
         raise NotImplementedError
 
 
-class NullLog(Log):
-    def write(self, text):
-        pass
+class Player:
+    def __init__(self, team: Team, channel: Channel):
+        self.team = team
+        self.channel = channel
 
 
-class FileLog(Log):
-    def __init__(self, filename):
-        self.file = open(filename, 'w', encoding='utf-8')
+class Spymaster(Player):
+    pass
 
-    def write(self, text):
-        print(text, file=self.file)
-        self.file.flush()
+
+class Guesser(Player):
+    pass
 
 
 def tag_en(word):
