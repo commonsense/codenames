@@ -42,9 +42,9 @@ class FileStreamChannel(Channel):
         elif tag == 'reveal':
             word, team = value
             if team is Team.red:
-                shown_category = term.bright_red('red')
+                shown_category = term.red('red')
             elif team is Team.blue:
-                shown_category = term.bright_blue('blue')
+                shown_category = term.blue('blue')
             elif team is Team.neutral:
                 shown_category = term.yellow('neutral')
             elif team is Team.assassin:
@@ -64,9 +64,9 @@ class FileStreamChannel(Channel):
             if team is Team.unknown:
                 print(justify(jword), end='', file=self.stream)
             elif team is Team.red:
-                print(term.bright_red(justify(jword + ' [r]')), end='', file=self.stream)
+                print(term.red(justify(jword + ' [r]')), end='', file=self.stream)
             elif team is Team.blue:
-                print(term.bright_blue(justify(jword + ' [b]')), end='', file=self.stream)
+                print(term.blue(justify(jword + ' [b]')), end='', file=self.stream)
             elif team is Team.neutral:
                 print(term.yellow(justify(jword + ' [n]')), end='', file=self.stream)
             elif team is Team.assassin:
