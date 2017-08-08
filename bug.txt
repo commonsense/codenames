@@ -1,0 +1,7 @@
+The game could not come up with a clue in the following position:
+
+Remaining on board: WHIP, CORNER, EGYPT, CENTAUR, POISON, ROW, POUND
+Good: CENTAUR
+Neutral: WHIP, POISON, POUND
+Bad: CORNER, EGYPT
+Assassin: ROW
