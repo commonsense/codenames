@@ -7,8 +7,9 @@ def notify_all(channels, tag, speaker, value):
         channel.notify(tag, speaker, value)
 
 
-def run_game(spymasters: Dict[Team, Spymaster], guessers: Dict[Team, Guesser]):
-    board = CodenamesBoard.generate()
+def run_game(spymasters: Dict[Team, Spymaster], guessers: Dict[Team, Guesser], board=None):
+    if board is None:
+        board = CodenamesBoard.generate()
     spymaster_channels = set(spymaster.channel for spymaster in spymasters.values())
     guesser_channels = set(guesser.channel for guesser in guessers.values())
     all_channels = spymaster_channels | guesser_channels

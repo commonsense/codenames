@@ -1,5 +1,5 @@
 from codenames import (Team, CodenamesBoard, Spymaster, Guesser, Channel)
-from codenames.ai import AISpymaster
+from codenames.ai import AISpymaster, DummySpymaster
 from codenames.gameplay import run_game
 from blessings import Terminal
 from typing import List, Tuple, Optional, IO
@@ -94,7 +94,23 @@ class HumanConsoleGuesser(Guesser):
             elif reply in valid:
                 return reply
             else:
-                prompt = '%r is not an available word.' % guess
+                prompt = '%r is not an available word.' % reply
+
+
+def custom_game(board):
+    spymaster_channel = FileStreamChannel.open_filename('/tmp/codenames.log')
+    spymasters = {
+        Team.red: AISpymaster(Team.red, spymaster_channel),
+        Team.blue: DummySpymaster(Team.blue, spymaster_channel)
+    }
+
+    guesser_channel = FileStreamChannel.open_stdout()
+    guessers = {
+        Team.red: HumanConsoleGuesser(Team.red, guesser_channel),
+        Team.blue: HumanConsoleGuesser(Team.blue, guesser_channel)
+    }
+
+    run_game(spymasters, guessers, board=board)
 
 
 def main():
@@ -111,6 +127,24 @@ def main():
     }
 
     run_game(spymasters, guessers)
+
+
+def run_irl_game(words, colors):
+    board = CodenamesBoard(words, colors, [Team.unknown for word in words])
+    spymaster_channel = FileStreamChannel.open_filename('/tmp/codenames.log')
+    spymasters = {
+        Team.red: DummySpymaster(Team.red, spymaster_channel),
+        Team.blue: AISpymaster(Team.blue, spymaster_channel)
+    }
+
+    guesser_channel = FileStreamChannel.open_stdout()
+    guessers = {
+        Team.red: HumanConsoleGuesser(Team.red, guesser_channel),
+        Team.blue: HumanConsoleGuesser(Team.blue, guesser_channel)
+    }
+
+    run_game(spymasters, guessers, board)
+
 
 
 if __name__ == '__main__':

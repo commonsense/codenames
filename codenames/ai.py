@@ -48,7 +48,20 @@ def _load_vectors():
 VECTORS = _load_vectors()
 
 
+class DummySpymaster(Spymaster):
+    def name(self):
+        return "%s dummy spymaster" % self.team.name.title()
+
+    def get_clue(self, board: CodenamesBoard) -> (int, str):
+        return (9, 'dummy clue')
+
+
+
 class AISpymaster(Spymaster):
+    def __init__(self, team, channel):
+        self.clued = set()
+        super().__init__(team, channel)
+
     def name(self):
         return "%s AI spymaster" % self.team.name.title()
 
@@ -67,6 +80,8 @@ class AISpymaster(Spymaster):
 
         best = (0, 'dunno', 0., None)
         for nclued, clue, probs, explanation in self.solve_clue(board, simframe, values):
+            if clue in self.clued:
+                continue
             prob_left = 1.
             ev = 0.
             for idx, prob in enumerate(probs):
@@ -85,6 +100,7 @@ class AISpymaster(Spymaster):
             ]
             description = ", ".join(describe_pieces)
             self.channel.notify('notify', self.name(), "%s %d -> %s" % (clue, nclued, description))
+        self.clued.add(clue)
         return (nclued, clue)
 
     def solve_clue(self, board: CodenamesBoard, simframe: pd.DataFrame, values: pd.Series):
