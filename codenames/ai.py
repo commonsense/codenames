@@ -33,7 +33,7 @@ for isum in range(3, 19):
 
 
 def _load_vectors():
-    frame = load_hdf('/home/rspeer/code/conceptnet5/data/vectors/mini.h5')
+    frame = load_hdf('/home/jlowry-duda/conceptnet5/data/vectors/mini.h5')
     selections = [
         label for label in frame.index
         if label.startswith('/c/en/') and '_' not in label and '#' not in label
@@ -72,7 +72,7 @@ class AISpymaster(Spymaster):
 
         unrevealed = board.unrevealed_items()
         board_vocab = [tag_en(word) for (word, team) in unrevealed]
-        simframe = VECTORS.frame.dot(VECTORS.frame.loc[board_vocab].T)
+        simframe = VECTORS.frame.dot(VECTORS.frame.reindex(board_vocab).T)
         values = pd.Series(
             [team.value_for_team(self.team) for (word, team) in unrevealed],
             index=board_vocab
