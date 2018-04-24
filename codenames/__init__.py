@@ -1,10 +1,10 @@
-from conceptnet5.vectors import standardized_uri
-from enum import Enum
-from pkg_resources import resource_filename
-from typing import List, Tuple, Dict, Sequence, Set
-import random
 import json
+from enum import Enum
+from typing import List, Tuple, Dict, Set
 
+import random
+from conceptnet5.vectors import standardized_uri
+from pkg_resources import resource_filename
 
 WORDLIST = [
     line.strip() for line in open(

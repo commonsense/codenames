@@ -1,14 +1,15 @@
-from conceptnet5.vectors.formats import load_hdf
-from conceptnet5.vectors.transforms import l2_normalize_rows
-from conceptnet5.vectors.query import VectorSpaceWrapper
-from codenames import (
-    tag_en, untag_en, CodenamesBoard, Team, Channel, Spymaster
-)
-from scipy.special import erf
 import numpy as np
 import pandas as pd
 import wordfreq
+from conceptnet5.vectors.formats import load_hdf
+from conceptnet5.vectors.query import VectorSpaceWrapper
+from conceptnet5.vectors.transforms import l2_normalize_rows
+from pkg_resources import resource_filename
+from scipy.special import erf
 
+from codenames import (
+    tag_en, untag_en, CodenamesBoard, Spymaster
+)
 
 POSITION_VALUES = np.ones(shape=(10, 10), dtype='f')
 POSITION_VALUES[0, :] = 1.
@@ -33,7 +34,7 @@ for isum in range(3, 19):
 
 
 def _load_vectors():
-    frame = load_hdf('/home/jlowry-duda/conceptnet5/data/vectors/mini.h5')
+    frame = load_hdf(resource_filename('codenames', 'data/mini.h5'))
     selections = [
         label for label in frame.index
         if label.startswith('/c/en/') and '_' not in label and '#' not in label

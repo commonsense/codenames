@@ -1,9 +1,11 @@
-from codenames import (Team, CodenamesBoard, Spymaster, Guesser, Channel)
+import sys
+from typing import List, Tuple, Optional, IO
+
+from blessings import Terminal
+
+from codenames import (Team, CodenamesBoard, Guesser, Channel)
 from codenames.ai import AISpymaster, DummySpymaster
 from codenames.gameplay import run_game
-from blessings import Terminal
-from typing import List, Tuple, Optional, IO
-import sys
 
 
 def justify(word):
