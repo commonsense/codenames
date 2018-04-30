@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import wordfreq
+from conceptnet5.vectors import standardized_uri
 from conceptnet5.vectors.formats import load_hdf
 from conceptnet5.vectors.query import VectorSpaceWrapper
 from conceptnet5.vectors.transforms import l2_normalize_rows
@@ -40,8 +41,14 @@ def _load_vectors():
         if label.startswith('/c/en/') and '_' not in label and '#' not in label
         and wordfreq.zipf_frequency(label[6:], 'en') > 3.0
     ]
-    # Add the two-word phrases that appear in Codenames
-    selections += ['/c/en/ice_cream', '/c/en/new_york', '/c/en/scuba_diver']
+    # Make sure all the words in Codenames are represented
+    wordlist = [
+        standardized_uri('en', line.strip()) for line in open(
+            resource_filename('codenames', 'data/codenames-words.txt')
+        )
+        ]
+    additions = [word for word in wordlist if word not in selections]
+    selections += additions
     frame = l2_normalize_rows(frame.loc[selections].astype('f'))
     return VectorSpaceWrapper(frame=frame)
 
@@ -55,7 +62,6 @@ class DummySpymaster(Spymaster):
 
     def get_clue(self, board: CodenamesBoard) -> (int, str):
         return (9, 'dummy clue')
-
 
 
 class AISpymaster(Spymaster):
@@ -78,7 +84,6 @@ class AISpymaster(Spymaster):
             [team.value_for_team(self.team) for (word, team) in unrevealed],
             index=board_vocab
         )
-
         best = (0, 'dunno', 0., None)
         for nclued, clue, probs, explanation in self.solve_clue(board, simframe, values):
             if clue in self.clued:
@@ -131,7 +136,7 @@ class AISpymaster(Spymaster):
             for clue in possible_clues.index:
                 word = untag_en(clue)
                 if board.clue_is_ok(word):
-                    probs = prob_frame.loc[clue, 0:(nclued-1)]
+                    probs = prob_frame.loc[clue, 0:(nclued -1)]
                     min_prob = prob_frame.loc[clue, nclued - 1]
                     row = combined_probs.loc[clue]
                     explanation = row[row >= min_prob].sort_values()
