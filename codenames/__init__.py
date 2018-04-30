@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List, Tuple, Dict, Set
 
 import random
+from conceptnet5.db.query import AssertionFinder
 from conceptnet5.vectors import standardized_uri
 from pkg_resources import resource_filename
 
@@ -49,6 +50,7 @@ class CodenamesBoard:
         assert not self.words[0].startswith('/c/en/')
         self.spy_values = spy_values
         self.known_values = known_values
+        self.finder = AssertionFinder()
 
     @staticmethod
     def generate():
@@ -57,11 +59,15 @@ class CodenamesBoard:
         random.shuffle(teams)
         return CodenamesBoard(words, teams, [Team.unknown] * 25)
 
+    def _is_form_of(self, word: str, clue: str) -> bool:
+        return self.finder.query({'node': tag_en(word), 'other': tag_en(clue),
+                                    'rel': '/r/FormOf', 'sources': '/s/resource/wiktionary/en/'})
+
     def clue_is_ok(self, clue: str) -> bool:
         assert not clue.startswith('/c/en/')
         clue = clue.upper()
         for word in self.words:
-            if word[:-1] in clue or clue in word:
+            if word == clue or self._is_form_of(word, clue):
                 return False
         return True
 
