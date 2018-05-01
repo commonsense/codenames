@@ -67,7 +67,11 @@ class CodenamesBoard:
         assert not clue.startswith('/c/en/')
         clue = clue.upper()
         for word in self.words:
-            if word == clue or self._is_form_of(word, clue):
+            if word == clue:
+                return False
+            elif word in clue:
+                return False
+            elif self._is_form_of(word, clue):
                 return False
         return True
 
