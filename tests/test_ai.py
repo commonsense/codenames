@@ -22,15 +22,13 @@ def setup_board():
     known_values = [Team.unknown] * 25
     BOARD = CodenamesBoard(words=words, spy_values=spy_values, known_values=known_values)
 
+
 def setup_problematic_board():
+    """
+    Previously, the AI would get stuck when presented with this board. It would return the first
+    word in the frame, "0".
+    """
     global BOARD
-    """
-    Remaining on board: WHIP, CORNER, EGYPT, CENTAUR, POISON, ROW, POUND
-    Good: CENTAUR
-    Neutral: WHIP, POISON, POUND
-    Bad: CORNER, EGYPT
-    Assassin: ROW
-    """
     words = ['WHIP', 'CORNER', 'EGYPT', 'CENTAUR', 'POISON',
              'ROW', 'POUND']
     spy_values = [Team.neutral, Team.blue, Team.blue, Team.red, Team.neutral,
@@ -56,10 +54,14 @@ def test_load_vectors():
 
 @with_setup(setup_board)
 def test_clue_is_ok():
-    ok_(BOARD.clue_is_ok('carrot')) # Under previous code, one couldn't clue any words starting
-    # with CA, TA, or PI.
+    # make sure one can clue a word starting with 'ca', 'ta', 'pi'
+    ok_(BOARD.clue_is_ok('carrot'))
     ok_(BOARD.clue_is_ok('baseball'))
     ok_(not BOARD.clue_is_ok('taps'))
+    ok_(not BOARD.clue_is_ok('states'))
+    ok_(not BOARD.clue_is_ok('locked'))
+    ok_(not BOARD.clue_is_ok('milking'))
+    ok_(not BOARD.clue_is_ok('matching'))
     ok_(not BOARD.clue_is_ok('gaming'))
     ok_(not BOARD.clue_is_ok('centre'))
     ok_(not BOARD.clue_is_ok('needle'))
@@ -70,6 +72,5 @@ def test_problematic_board():
     spymaster_channel = FileStreamChannel.open_filename('/tmp/codenames_test.log')
     spymaster = AISpymaster(Team.red, spymaster_channel)
     clue_number, clue_word = spymaster.get_clue(BOARD)
-    # Before, the problematic board would return the first word in the frame, "0"
     assert_not_equal(clue_word, '0')
 
