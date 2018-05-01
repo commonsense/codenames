@@ -136,7 +136,7 @@ class AISpymaster(Spymaster):
             for clue in possible_clues.index:
                 word = untag_en(clue)
                 if board.clue_is_ok(word):
-                    probs = prob_frame.loc[clue, 0:(nclued -1)]
+                    probs = prob_frame.loc[clue, 0:(nclued - 1)]
                     min_prob = prob_frame.loc[clue, nclued - 1]
                     row = combined_probs.loc[clue]
                     explanation = row[row >= min_prob].sort_values()

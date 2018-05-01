@@ -103,7 +103,7 @@ def custom_game(board):
     spymaster_channel = FileStreamChannel.open_filename('/tmp/codenames.log')
     spymasters = {
         Team.red: AISpymaster(Team.red, spymaster_channel),
-        Team.blue: DummySpymaster(Team.blue, spymaster_channel)
+        Team.blue: AISpymaster(Team.blue, spymaster_channel)
     }
 
     guesser_channel = FileStreamChannel.open_stdout()

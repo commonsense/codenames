@@ -57,6 +57,8 @@ def test_clue_is_ok():
     # make sure one can clue a word starting with 'ca', 'ta', 'pi'
     ok_(BOARD.clue_is_ok('carrot'))
     ok_(BOARD.clue_is_ok('baseball'))
+    ok_(not BOARD.clue_is_ok('forearm'))
+    ok_(not BOARD.clue_is_ok('airways'))
     ok_(not BOARD.clue_is_ok('taps'))
     ok_(not BOARD.clue_is_ok('states'))
     ok_(not BOARD.clue_is_ok('locked'))
@@ -73,4 +75,3 @@ def test_problematic_board():
     spymaster = AISpymaster(Team.red, spymaster_channel)
     clue_number, clue_word = spymaster.get_clue(BOARD)
     assert_not_equal(clue_word, '0')
-
