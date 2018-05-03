@@ -51,7 +51,6 @@ def test_load_vectors():
         ok_(word in vectors.frame.index)
 
 
-
 @with_setup(setup_board)
 def test_clue_is_ok():
     # make sure one can clue a word starting with 'ca', 'ta', 'pi'
