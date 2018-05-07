@@ -5,3 +5,4 @@ Good: CENTAUR
 Neutral: WHIP, POISON, POUND
 Bad: CORNER, EGYPT
 Assassin: ROW
+Status: fixed

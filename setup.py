@@ -9,7 +9,8 @@ setup(
     description="An AI that plays Vlaada Chvatil's wordgame using ConceptNet",
     packages=['codenames'],
     include_package_data=True,
-    install_requires=['numpy', 'scipy', 'pandas', 'conceptnet >= 5.5', 'blessings'],
+    install_requires=['numpy', 'scipy', 'sklearn', 'pandas', 'conceptnet >= 5.5', 'blessings',
+                      'nose'],
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",

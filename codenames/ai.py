@@ -1,14 +1,16 @@
-from conceptnet5.vectors.formats import load_hdf
-from conceptnet5.vectors.transforms import l2_normalize_rows
-from conceptnet5.vectors.query import VectorSpaceWrapper
-from codenames import (
-    tag_en, untag_en, CodenamesBoard, Team, Channel, Spymaster
-)
-from scipy.special import erf
 import numpy as np
 import pandas as pd
 import wordfreq
+from conceptnet5.vectors import standardized_uri
+from conceptnet5.vectors.formats import load_hdf
+from conceptnet5.vectors.query import VectorSpaceWrapper
+from conceptnet5.vectors.transforms import l2_normalize_rows
+from pkg_resources import resource_filename
+from scipy.special import erf
 
+from codenames import (
+    tag_en, untag_en, CodenamesBoard, Spymaster
+)
 
 POSITION_VALUES = np.ones(shape=(10, 10), dtype='f')
 POSITION_VALUES[0, :] = 1.
@@ -33,14 +35,20 @@ for isum in range(3, 19):
 
 
 def _load_vectors():
-    frame = load_hdf('/home/rspeer/code/conceptnet5/data/vectors/mini.h5')
+    frame = load_hdf(resource_filename('codenames', 'data/mini.h5'))
     selections = [
         label for label in frame.index
         if label.startswith('/c/en/') and '_' not in label and '#' not in label
         and wordfreq.zipf_frequency(label[6:], 'en') > 3.0
     ]
-    # Add the two-word phrases that appear in Codenames
-    selections += ['/c/en/ice_cream', '/c/en/new_york', '/c/en/scuba_diver']
+    # Make sure all the words in Codenames are represented
+    wordlist = [
+        standardized_uri('en', line.strip()) for line in open(
+            resource_filename('codenames', 'data/codenames-words.txt')
+        )
+        ]
+    additions = [word for word in wordlist if word not in selections]
+    selections += additions
     frame = l2_normalize_rows(frame.loc[selections].astype('f'))
     return VectorSpaceWrapper(frame=frame)
 
@@ -54,7 +62,6 @@ class DummySpymaster(Spymaster):
 
     def get_clue(self, board: CodenamesBoard) -> (int, str):
         return (9, 'dummy clue')
-
 
 
 class AISpymaster(Spymaster):
@@ -72,12 +79,11 @@ class AISpymaster(Spymaster):
 
         unrevealed = board.unrevealed_items()
         board_vocab = [tag_en(word) for (word, team) in unrevealed]
-        simframe = VECTORS.frame.dot(VECTORS.frame.loc[board_vocab].T)
+        simframe = VECTORS.frame.dot(VECTORS.frame.reindex(board_vocab).T)
         values = pd.Series(
             [team.value_for_team(self.team) for (word, team) in unrevealed],
             index=board_vocab
         )
-
         best = (0, 'dunno', 0., None)
         for nclued, clue, probs, explanation in self.solve_clue(board, simframe, values):
             if clue in self.clued:
@@ -130,7 +136,7 @@ class AISpymaster(Spymaster):
             for clue in possible_clues.index:
                 word = untag_en(clue)
                 if board.clue_is_ok(word):
-                    probs = prob_frame.loc[clue, 0:(nclued-1)]
+                    probs = prob_frame.loc[clue, 0:(nclued - 1)]
                     min_prob = prob_frame.loc[clue, nclued - 1]
                     row = combined_probs.loc[clue]
                     explanation = row[row >= min_prob].sort_values()

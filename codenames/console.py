@@ -1,9 +1,11 @@
-from codenames import (Team, CodenamesBoard, Spymaster, Guesser, Channel)
+import sys
+from typing import List, Tuple, Optional, IO
+
+from blessings import Terminal
+
+from codenames import (Team, CodenamesBoard, Guesser, Channel)
 from codenames.ai import AISpymaster, DummySpymaster
 from codenames.gameplay import run_game
-from blessings import Terminal
-from typing import List, Tuple, Optional, IO
-import sys
 
 
 def justify(word):
@@ -101,7 +103,7 @@ def custom_game(board):
     spymaster_channel = FileStreamChannel.open_filename('/tmp/codenames.log')
     spymasters = {
         Team.red: AISpymaster(Team.red, spymaster_channel),
-        Team.blue: DummySpymaster(Team.blue, spymaster_channel)
+        Team.blue: AISpymaster(Team.blue, spymaster_channel)
     }
 
     guesser_channel = FileStreamChannel.open_stdout()
